@@ -1,0 +1,25 @@
+{
+  "name": "chop-n-dash",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "tsc:watch": "tsc --watch",
+    "sass:watch": "sass --watch src/scss:public/assets/css",
+    "dev": "concurrently \"npm run tsc:watch\" \"npm run sass:watch\""
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "dependencies": {
+    "@types/chart.js": "^2.9.41",
+    "@types/node": "^24.9.0",
+    "chart.js": "^4.5.1",
+    "concurrently": "^9.2.1",
+    "sass": "^1.93.2",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.9.3"
+  }
+}

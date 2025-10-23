@@ -1,0 +1,43 @@
+chop-n-dash/
+├── public/                 # The ONLY publicly accessible folder (document root)
+│   ├── assets/             # Static files (images, compiled JS/CSS)
+│   │   ├── css/            # Compiled SCSS files (e.g., style.css)
+│   │   ├── images/         # Product photos, logos, favicons
+│   │   └── js/             # Compiled TypeScript (e.g., app.js, vendor.js)
+│   ├── index.php           # Main entry point (router logic starts here)
+│   └── .htaccess           # Rewrites for clean URLs (optional but recommended)
+│
+├── src/                    # All source code that is compiled or processed
+│   ├── scss/               # Source SCSS files
+│   │   ├── abstracts/      # Variables, mixins, functions (e.g., _variables.scss)
+│   │   ├── base/           # Reset, typography, utility classes (e.g., _reset.scss)
+│   │   ├── components/     # Buttons, cards, forms (e.g., _card.scss)
+│   │   ├── layouts/        # Header, footer, navigation (e.g., _header.scss)
+│   │   ├── pages/          # Page-specific styles (e.g., _home.scss, _admin.scss)
+│   │   └── style.scss      # Primary file that imports all others
+│   └── ts/                 # Source TypeScript files
+│       ├── components/     # Classes/functions for UI elements (Cart, ReviewForm)
+│       ├── core/           # Main application logic/initialization (e.g., main.ts)
+│       ├── models/         # TypeScript interfaces/classes for data (Product, Order)
+│       └── services/       # Code for handling API calls (e.g., ApiService.ts)
+│
+├── app/                    # Backend PHP source code (MUST be outside of /public)
+│   ├── config/             # Database credentials, settings, constants
+│   ├── controllers/        # Handle requests and return responses (e.g., OrderController.php)
+│   ├── core/               # Routing, Session management, base classes
+│   │   ├── Database.php    # DB connection class
+│   │   └── Router.php      # URL routing logic
+│   ├── models/             # Interact with the database (e.g., ProductModel.php)
+│   ├── views/              # PHP templates for HTML structure
+│   │   ├── partials/       # Reusable chunks (header, footer, navbar)
+│   │   ├── admin/          # Admin-specific pages
+│   │   ├── customer/       # Customer-facing pages
+│   │   └── vendor/         # Vendor dashboard pages
+│   └── services/           # Utility classes (e.g., AuthManager.php, TokenHandler.php)
+│
+├── .env
+├── vendor/                 # Third-party PHP libraries (managed by Composer)
+├── node_modules/           # Third-party JS/TS libraries (managed by npm/yarn)
+├── .gitignore              # Files to ignore (e.g., /vendor, /node_modules, config/secrets.php)
+├── package.json            # npm/yarn configuration for TypeScript/SCSS compilation
+└── composer.json           # Composer configuration for PHP dependencies

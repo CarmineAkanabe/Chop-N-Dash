@@ -1,0 +1,13 @@
+# Turn the Rewrite Engine on
+RewriteEngine On
+RewriteBase /chop-n-dash/
+# Check if the requested file/directory exists. If it does, stop here.
+# This allows access to existing files like public/assets/css/style.css
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteCond %{REQUEST_FILENAME} !-f
+# If the file/directory does not exist, rewrite the request to index.php
+# and pass the original URL as a query string (or path info, depending on setup)
+RewriteRule ^ index.php [L]
+
+# Optional: Set the default page/entry point
+DirectoryIndex index.php
