@@ -1,8 +1,13 @@
+
+------------------------------------------------------------------------------------------------------------------
+                            FOLDER STRUCTURE OF THE APPLICATION
+------------------------------------------------------------------------------------------------------------------
 chop-n-dash/
 ├── public/                 # The ONLY publicly accessible folder (document root)
 │   ├── assets/             # Static files (images, compiled JS/CSS)
 │   │   ├── css/            # Compiled SCSS files (e.g., style.css)
 │   │   ├── images/         # Product photos, logos, favicons
+|   |   ├── fonts/          # Contains font styles used in the application
 │   │   └── js/             # Compiled TypeScript (e.g., app.js, vendor.js)
 │   ├── index.php           # Main entry point (router logic starts here)
 │   └── .htaccess           # Rewrites for clean URLs (optional but recommended)
@@ -17,9 +22,10 @@ chop-n-dash/
 │   │   └── style.scss      # Primary file that imports all others
 │   └── ts/                 # Source TypeScript files
 │       ├── components/     # Classes/functions for UI elements (Cart, ReviewForm)
-│       ├── core/           # Main application logic/initialization (e.g., main.ts)
-│       ├── models/         # TypeScript interfaces/classes for data (Product, Order)
-│       └── services/       # Code for handling API calls (e.g., ApiService.ts)
+│       ├── models/         # TypeScript interfaces/classes for data obtained from the backend (Product, Order)
+|       ├── main/           # Contains all the main TypeScript logic files (e.g., main.Ts, etc)
+|       ├── services/       # Code for handling API calls (e.g., ApiService.ts)
+│       └── App.ts          # This will be the main Ts file using all files above (Entry point initializer)
 │
 ├── app/                    # Backend PHP source code (MUST be outside of /public)
 │   ├── config/             # Database credentials, settings, constants
@@ -29,15 +35,287 @@ chop-n-dash/
 │   │   └── Router.php      # URL routing logic
 │   ├── models/             # Interact with the database (e.g., ProductModel.php)
 │   ├── views/              # PHP templates for HTML structure
-│   │   ├── partials/       # Reusable chunks (header, footer, navbar)
+│   │   ├── includes/       # Reusable chunks (header, footer, navbar, sidebar)
 │   │   ├── admin/          # Admin-specific pages
-│   │   ├── customer/       # Customer-facing pages
-│   │   └── vendor/         # Vendor dashboard pages
-│   └── services/           # Utility classes (e.g., AuthManager.php, TokenHandler.php)
+    |   ├── Auth/           # Pages for user authentication (e.g., Login.php, Register.php,etc)
+│   │   ├── protected/      # Pages that require authentication to access (Divided into customer and vendor)
+│   │   └── public/         # Vendor dashboard pages
+│   └── services/           # Utility classes
 │
+├──database/
+|   └── chop-n-dash.sql     # describes the database schema
+|
 ├── .env
+├── Comments.txt            # A little text document describing all indented Comments
+├── Documentaion.docx       # A full detailed documentation of the web application
 ├── vendor/                 # Third-party PHP libraries (managed by Composer)
 ├── node_modules/           # Third-party JS/TS libraries (managed by npm/yarn)
-├── .gitignore              # Files to ignore (e.g., /vendor, /node_modules, config/secrets.php)
-├── package.json            # npm/yarn configuration for TypeScript/SCSS compilation
-└── composer.json           # Composer configuration for PHP dependencies
+├── .gitignore              # Files to ignore (e.g., /vendor, /node_modules, etc)
+├── package.json            # npm configuration for TypeScript/SCSS compilation
+└── composer.json           # Composer configuration for PHP dependencies.
+
+------------------------------------------------------------------------------------------------------------------
+                        ELABORATION ON THE APPLICATION ARCHITECTTURE (Model-View-Controller-Service)
+------------------------------------------------------------------------------------------------------------------
+
+Before moving to the architecture of the application, we need to see the various tables, indexes and views that exist in the MySQL database chop-n-dash. The database schema goes as follows:
+
+CREATE TABLE users (
+    user_id INT NOT NULL PRIMARY KEY AUTO_INCREMENT COMMENT 'Primary Key',
+    user_name VARCHAR(255) NOT NULL,
+    user_email VARCHAR(255) NOT NULL UNIQUE,
+    password_hash VARCHAR(255) NOT NULL,
+    user_role VARCHAR(50) NOT NULL COMMENT 'Enum for eg. "customer", "vendor", "admin"',
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT 'Timestamp of creation',
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT 'Last Update Time'
+) COMMENT 'This table defines all users of the system (their main shared attributes, more deviation will be done in other tables)';
+
+CREATE TABLE vendors (
+    vendor_id INT NOT NULL PRIMARY KEY AUTO_INCREMENT COMMENT 'Primary Key',
+    user_id INT NOT NULL,
+    vendor_name VARCHAR(255) NOT NULL,
+    vendor_description TEXT,
+    vendor_address VARCHAR(255) NOT NULL,
+    vendor_phone VARCHAR(50) NOT NULL,
+    is_active TINYINT(1) NOT NULL DEFAULT 1 COMMENT '1 if active, 0 if inactive',
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT 'Timestamp of creation',
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT 'Last Update Time',
+    FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE
+) COMMENT 'This table defines the vendors although they are part of the users table, this is to define the "shop" of the vendor with address and contact details (further details in other tables)';
+
+CREATE TABLE products (
+    product_id INT NOT NULL PRIMARY KEY AUTO_INCREMENT COMMENT 'Primary Key',
+    vendor_id INT NOT NULL,
+    product_name VARCHAR(255) NOT NULL,
+    product_description TEXT,
+    product_price DECIMAL(10,2) NOT NULL,
+    inventory_count INT NOT NULL DEFAULT 0 COMMENT 'Quantity available in stock',
+    product_status VARCHAR(50) NOT NULL COMMENT 'Enum for eg. "available", "out of stock", "discontinued"',
+    category VARCHAR(100) NOT NULL COMMENT 'Enum for eg. "food", "drink", "kitchen", "other"',
+    image_url VARCHAR(255) NOT NULL COMMENT 'Path to the product image (stored in the (public/assets/images/products) folder)',
+    added_at DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT 'Timestamp of addition',
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT 'Last Update Time',
+    FOREIGN KEY (vendor_id) REFERENCES vendors(vendor_id) ON DELETE CASCADE
+) COMMENT 'This table defines the products of the vendors, each product is associated with a vendor and has a name, description, price, inventory count, category, image and timestamps';
+
+CREATE TABLE orders (
+    order_id INT NOT NULL PRIMARY KEY AUTO_INCREMENT COMMENT 'Primary Key',
+    customer_id INT NOT NULL,
+    order_status VARCHAR(50) NOT NULL COMMENT 'Enum for eg. "pending", "confirmed", "shipped", "delivered", "cancelled"',
+    order_total DECIMAL(10,2) NOT NULL,
+    order_date DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT 'Timestamp of order placement',
+    FOREIGN KEY (customer_id) REFERENCES users(user_id) ON DELETE CASCADE
+) COMMENT 'This table defines the orders placed by the customers, each order is associated with a customer and has a status, total price, date and timestamps';
+
+CREATE TABLE order_products (
+    order_product_id INT NOT NULL PRIMARY KEY AUTO_INCREMENT COMMENT 'Primary Key',
+    order_id INT NOT NULL,
+    product_id INT NOT NULL,
+    vendor_id INT NOT NULL,
+    quantity INT NOT NULL DEFAULT 1 COMMENT 'Quantity of this product in the order',
+    unit_price DECIMAL(10,2) NOT NULL COMMENT 'Price per unit at time of order',
+    item_total DECIMAL(10,2) NOT NULL COMMENT 'Total for this line item (quantity * unit_price)',
+    item_status VARCHAR(50) NOT NULL DEFAULT 'pending' COMMENT 'Status of this specific item',
+    FOREIGN KEY (order_id) REFERENCES orders(order_id) ON DELETE CASCADE,
+    FOREIGN KEY (product_id) REFERENCES products(product_id) ON DELETE RESTRICT,
+    FOREIGN KEY (vendor_id) REFERENCES vendors(vendor_id) ON DELETE RESTRICT
+) COMMENT 'This table defines the individual products within each order';
+
+CREATE TABLE reviews (
+    review_id INT NOT NULL PRIMARY KEY AUTO_INCREMENT COMMENT 'Primary Key',
+    customer_id INT NOT NULL,
+    product_id INT NOT NULL,
+    review_rating DECIMAL(2,1) NOT NULL DEFAULT 0.0 COMMENT 'Rating from 0 to 5',
+    review_title VARCHAR(255) NULL COMMENT 'Optional title for the review',
+    review_comment TEXT NOT NULL,
+    is_verified_purchase TINYINT(1) NOT NULL DEFAULT 0 COMMENT '1 if customer purchased this product',
+    helpful_votes INT NOT NULL DEFAULT 0 COMMENT 'Number of helpful votes',
+    not_helpful_votes INT NOT NULL DEFAULT 0 COMMENT 'Number of not helpful votes',
+    review_date DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT 'Timestamp of review',
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT 'Last Update Time',
+    FOREIGN KEY (customer_id) REFERENCES users(user_id) ON DELETE CASCADE,
+    FOREIGN KEY (product_id) REFERENCES products(product_id) ON DELETE RESTRICT,
+    UNIQUE KEY unique_customer_product_review (customer_id, product_id)
+) COMMENT 'This table defines the reviews left by customers on products (each customer can only review a product once, and each product can have multiple reviews, all linked to a vendor)';
+
+******************************************************************************************************************
+    These are the miscellaneous tables for the Chop-N-Dash project (not core model tables) that facilitate user experience:
+    - customer_profile
+    - vendor_profile
+    - notifications
+    - shopping_cart
+******************************************************************************************************************
+
+CREATE TABLE customer_profiles (
+    profile_id INT NOT NULL PRIMARY KEY AUTO_INCREMENT,
+    customer_id INT NOT NULL COMMENT 'Foreign Key to users table',
+    first_name VARCHAR(100) NOT NULL,
+    last_name VARCHAR(100) NOT NULL,
+    customerphone VARCHAR(20) NULL COMMENT 'Optional phone number for the customer',
+    customeraddress VARCHAR(255) NULL COMMENT 'Optional address for the customer',
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT 'Timestamp of creation',
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT 'Last Update Time',
+    FOREIGN KEY (customer_id) REFERENCES users(user_id) ON DELETE CASCADE
+) COMMENT 'This table defines the customer profiles, each customer profile is associated with a user and has a first name, last name, phone, address and timestamps';
+
+CREATE TABLE vendor_profiles (
+    profile_id INT NOT NULL PRIMARY KEY AUTO_INCREMENT,
+    vendor_id INT NOT NULL COMMENT 'Foreign Key to vendors table',
+    business_license VARCHAR(255) NULL,
+    tax_id VARCHAR(100) NULL,
+    payment_number VARCHAR(100) NULL COMMENT 'Optional mobile money account for the vendor',
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT 'Timestamp of creation',
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT 'Last Update Time',
+    FOREIGN KEY (vendor_id) REFERENCES vendors(vendor_id) ON DELETE CASCADE
+) COMMENT 'This table defines the vendor profiles, each vendor profile is associated with a vendor and has a business license, tax id, bank account and timestamps';
+
+CREATE TABLE notifications (
+    notification_id INT NOT NULL PRIMARY KEY AUTO_INCREMENT,
+    user_id INT NOT NULL COMMENT 'This references the user who the notification is sent to',
+    title VARCHAR(255) NOT NULL,
+    message TEXT NOT NULL,
+    notification_type VARCHAR(50) NOT NULL COMMENT 'Enum eg. "account-status", "order-placed',
+    is_read TINYINT(1) NOT NULL DEFAULT 0,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE
+) COMMENT 'This table describes the notifications sent to the users, each notification is associated with a user and has a title, message, type, read status, creation timestamp and foreign key to the users table';
+
+CREATE TABLE shopping_cart (
+    cart_id INT NOT NULL PRIMARY KEY AUTO_INCREMENT,
+    customer_id INT NOT NULL COMMENT 'This references the customer who the shopping cart is associated with',
+    product_id INT NOT NULL COMMENT 'This references the product in the shopping cart',
+    quantity INT NOT NULL DEFAULT 1 COMMENT 'The quantity of the product in the shopping cart',
+    added_at DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT 'Timestamp of addition',
+    FOREIGN KEY (customer_id) REFERENCES users(user_id) ON DELETE CASCADE,
+    FOREIGN KEY (product_id) REFERENCES products(product_id) ON DELETE CASCADE,
+    UNIQUE KEY unique_customer_product (customer_id, product_id)
+) COMMENT 'This table describes the shopping cart of the customers, each shopping cart is associated with a customer and has a product and quantity and timestamps';
+
+/* Payments go here (will be added later) */
+
+***************************************************************************************************
+    These are the functionality tables that provide functional aspects like authh management, etc
+***************************************************************************************************
+
+CREATE TABLE sessions (
+    session_id VARCHAR(128) NOT NULL PRIMARY KEY,
+    user_id INT NOT NULL COMMENT 'references the user to this session',
+    session_data TEXT NULL,
+    ip_address VARCHAR(45) NULL,
+    user_agent TEXT NULL COMMENT 'TBA',
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    expires_at DATETIME NOT NULL COMMENT 'When the session expires',
+    FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE
+) COMMENT 'This table will contain all sessions data relative to the current user';
+
+CREATE TABLE tokens (
+    token_id INT NOT NULL PRIMARY KEY AUTO_INCREMENT,
+    user_id INT NOT NULL,
+    token_type VARCHAR(50) NOT NULL COMMENT 'Enum eg. "email-verification (not implemented now), etc',
+    token_value VARCHAR(255) NOT NULL UNIQUE,
+    expires_at DATETIME NOT NULL,
+    used_at DATETIME NULL,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE
+) COMMENT 'This table will contain all user token data for authenticated access';
+
+CREATE TABLE admin_logs (
+    log_id INT NOT NULL PRIMARY KEY AUTO_INCREMENT,
+    admin_id INT NOT NULL COMMENT 'Admins are users too but there is a whole section for them',
+    action VARCHAR(100) NOT NULL,
+    target_type VARCHAR(50) NOT NULL,
+    target_id INT NOT NULL,
+    description TEXT NOT NULL,
+    ip_address VARCHAR(45) NULL,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (admin_id) REFERENCES users(user_id) ON DELETE RESTRICT
+) COMMENT 'This table tracks all admin activities for audit purposes';
+
+********************************************************************
+    These are indexes for tokens and sessions for easier access
+********************************************************************
+
+CREATE INDEX idx_sessions_user_id ON sessions(user_id);
+CREATE INDEX idx_sessions_expires_at ON sessions(expires_at);
+
+CREATE INDEX idx_tokens_value ON tokens(token_value);
+CREATE INDEX idx_tokens_expires_at ON tokens(expires_at);
+
+******************************************************************************
+    These are the views we will need for displaying data on the application
+******************************************************************************
+
+With all that being set, we can now proceed to the models used by the app to C.R.U.D. Data from the database
+
+MODELS:
+app/models/
+├── User.php
+├── Vendor.php
+├── Product.php
+├── Order.php
+├── OrderProduct.php
+├── Review.php
+├── CustomerProfile.php
+├── VendorProfile.php
+├── Session.php
+├── Token.php
+├── Notification.php
+├── ShoppingCart.php
+└── AdminLog.php
+
+They all inherit (extend) from the base model class in 'app/core/Model.php'
+
+MODEL RELATIONS:
+User (1) → (1) CustomerProfile
+User (1) → (1) Vendor → (1) VendorProfile
+Vendor (1) → (Many) Products
+User (1) → (Many) Orders
+Order (1) → (Many) OrderProducts
+Product (1) → (Many) Reviews
+User (1) → (Many) Sessions
+User (1) → (Many) Tokens
+User (1) → (Many) Notifications
+User (1) → (Many) ShoppingCart
+User (1) → (Many) AdminLogs
+
+Next thing are the Controllers of the app system.
+
+CONTROLLERS:
+app/controllers/
+├── AdminController.php 
+├── AuthController.php 
+├── OrderController.php 
+├── ReviewController.php 
+├── VendorController.php 
+├── ProductController.php 
+├── CustomerController.php 
+├── CartController.php 
+├── NotificationController.php 
+├── DashboardController.php 
+└── SearchController.php 
+
+They all extend the base class controller in 'app/core/Controller.php'
+
+Next thing are the Services of the app system.
+
+SERVICES:
+app/services/
+├── AuthService.php
+├── InventoryService.php
+├── LogService.php
+├── OrderService.php
+├── ReportService.php
+├── ReviewService.php
+├── TaxService.php
+├── VendorService.php
+├── ProductService.php
+├── CartService.php 
+├── NotificationService.php 
+├── SearchService.php
+├── EmailService.php
+├── FileService.php 
+└── ValidationService.php 
+
+They all extend the base service class in 'app/core/Service.php'
+
+Now for the views it's still to be analysed
